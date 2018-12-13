@@ -4,7 +4,7 @@ import torch
 import torch.optim as optim
 from custom_wav_loader import wavLoader
 import numpy as np
-from model import LeNet, VGG, ResNet, BasicBlock, resnet34, resnet18
+from resnet import resnet34, resnet18
 from train import train, test
 import os
 import visdom
@@ -31,7 +31,7 @@ log_interval = 100
 seed = 1234  # random seed
 batch_size = 20  # 100
 test_batch_size = 10
-arc = 'ResNet'  # LeNet, VGG11, VGG13, VGG16, VGG19' ResNet
+arc = 'resnet18'
 
 # sound setting
 window_size = 0.01  # 0.02
@@ -40,31 +40,22 @@ window_type = 'hamming'
 normalize = True
 
 # loading data
-train_dataset = wavLoader(train_path, window_size=window_size, window_stride=window_stride, window_type=window_type,
-                          normalize=normalize)
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4,
-                                           pin_memory=True, sampler=None)
-valid_dataset = wavLoader(valid_path, window_size=window_size, window_stride=window_stride, window_type=window_type,
-                          normalize=normalize)
-valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch_size, shuffle=None, num_workers=4,
-                                           pin_memory=True, sampler=None)
-test_dataset = wavLoader(test_path, window_size=window_size, window_stride=window_stride, window_type=window_type,
-                         normalize=normalize)
-test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=test_batch_size, shuffle=None, num_workers=4,
-                                          pin_memory=True, sampler=None)
+train_dataset = wavLoader(
+    train_path, window_size=window_size, window_stride=window_stride, window_type=window_type, normalize=normalize)
+train_loader = torch.utils.data.DataLoader(
+    train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True, sampler=None)
+valid_dataset = wavLoader(
+    valid_path, window_size=window_size, window_stride=window_stride, window_type=window_type, normalize=normalize)
+valid_loader = torch.utils.data.DataLoader(
+    valid_dataset, batch_size=batch_size, shuffle=None, num_workers=4, pin_memory=True, sampler=None)
+test_dataset = wavLoader(
+    test_path, window_size=window_size, window_stride=window_stride, window_type=window_type, normalize=normalize)
+test_loader = torch.utils.data.DataLoader(
+    test_dataset, batch_size=test_batch_size, shuffle=None, num_workers=4, pin_memory=True, sampler=None)
 
-# build model
-if arc == 'LeNet':
-    model = LeNet()
-    print("LeNet")
-elif arc.startswith('VGG'):
-    model = VGG(arc)
-    print("VGG")
-elif arc.startswith('Res'):
-    model = resnet18()
-    print("ResNet")
-else:
-    model = LeNet()
+model = resnet18()
+print("ResNet")
+
 
 model = torch.nn.DataParallel(model).cuda()
 
@@ -88,8 +79,7 @@ if os.path.isfile('./checkpoint/' + str(arc) + '.pth'):
 
 # visdom
 loss_graph = vis.line(Y=np.column_stack([10, 10, 10]), X=np.column_stack([0, 0, 0]),
-                      opts=dict(title='loss', legend=['Train loss', 'Valid loss', 'Test loss'], showlegend=True,
-                                xlabel='epoch'))
+    opts=dict(title='loss', legend=['Train loss', 'Valid loss', 'Test loss'], showlegend=True, xlabel='epoch'))
 
 # trainint with early stopping
 
@@ -107,18 +97,13 @@ while (epoch < epochs + 1) and (iteration < patience):
         print('\nSaving model of ' + str(arc) + '\n')
         iteration = 0
         best_valid_loss = valid_loss
-        state = {
-            'net': model.module if True else model,
-            'acc': valid_loss,
-            'epoch': epoch,
-        }
+        state = {'net': model.module if True else model, 'acc': valid_loss, 'epoch': epoch}
         if not os.path.isdir('checkpoint'):  # model load should be
             os.mkdir('checkpoint')
         torch.save(state, './checkpoint/' + str(arc) + '.pth')
 
     vis.line(Y=np.column_stack([train_loss, valid_loss, test_loss]), X=np.column_stack([epoch, epoch, epoch]),
-             win=loss_graph, update='append',
-             opts=dict(legend=['Train loss', 'Valid loss', 'Test loss'], showlegend=True))
+        win=loss_graph, update='append', opts=dict(legend=['Train loss', 'Valid loss', 'Test loss'], showlegend=True))
     epoch += 1
 # test(test_loader,model,True,mode='test loss')
 print('Finished!!')
@@ -131,15 +116,14 @@ import numpy as np
 y_target =    [1, 1, 1, 0, 0, 2, 0, 3]
 y_predicted = [1, 0, 1, 0, 0, 2, 1, 3]
 
-cm = confusion_matrix(y_target=y_target,
-                      y_predicted=y_predicted,
-                      binary=False)
+cm = confusion_matrix(y_target=y_target, y_predicted=y_predicted, binary=False)
 
 import matplotlib.pyplot as plt
 from mlxtend.evaluate import confusion_matrix
 
 fig, ax = plot_confusion_matrix(conf_mat=cm)
 plt.show()
+
 
 def confusion(prediction, truth):
     confusion_vector = prediction / truth

@@ -4,13 +4,11 @@ import torch
 from torch import nn
 from torch import optim
 from torch.optim import lr_scheduler
+from torchvision import transforms
 
 from opts import parse_opts
 from model import generate_model
-from spatial_transforms import (Compose, Normalize, Scale, CenterCrop, CornerCrop,
-    MultiScaleCornerCrop, MultiScaleRandomCrop, RandomHorizontalFlip, ToTensor)
-from temporal_transforms import LoopPadding, TemporalRandomCrop
-from target_transforms import ClassLabel, VideoID
+from trans import MultiScaleCornerCrop, MultiScaleRandomCrop, LoopPadding, TemporalRandomCrop, ClassLabel, VideoID
 from dataset import get_training_set, get_validation_set, get_test_set
 from utils import Logger, get_mean, get_std
 from train import train_epoch
@@ -47,11 +45,11 @@ if __name__ == '__main__':
         criterion = criterion.cuda()
 
     if opt.no_mean_norm and not opt.std_norm:
-        norm_method = Normalize([0, 0, 0], [1, 1, 1])
+        norm_method = transforms.Normalize([0, 0, 0], [1, 1, 1])
     elif not opt.std_norm:
-        norm_method = Normalize(opt.mean, [1, 1, 1])
+        norm_method = transforms.Normalize(opt.mean, [1, 1, 1])
     else:
-        norm_method = Normalize(opt.mean, opt.std)
+        norm_method = transforms.Normalize(opt.mean, opt.std)
 
     if not opt.no_train:
         assert opt.train_crop in ['random', 'corner', 'center']
@@ -61,7 +59,9 @@ if __name__ == '__main__':
             crop_method = MultiScaleCornerCrop(opt.scales, opt.sample_size)
         elif opt.train_crop == 'center':
             crop_method = MultiScaleCornerCrop(opt.scales, opt.sample_size, crop_positions=['c'])
-        spatial_transform = Compose([crop_method, RandomHorizontalFlip(), ToTensor(opt.norm_value), norm_method])
+        spatial_transform = transforms.Compose([
+            crop_method, transforms.RandomHorizontalFlip(), transforms.ToTensor(opt.norm_value), norm_method
+        ])
         temporal_transform = TemporalRandomCrop(opt.sample_duration)
         target_transform = ClassLabel()
         training_data = get_training_set(opt, spatial_transform, temporal_transform, target_transform)
@@ -81,8 +81,11 @@ if __name__ == '__main__':
         scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=opt.lr_patience)
 
     if not opt.no_val:
-        spatial_transform = Compose(
-            [Scale(opt.sample_size), CenterCrop(opt.sample_size), ToTensor(opt.norm_value), norm_method])
+        spatial_transform = transforms.Compose([
+            transforms.Scale(opt.sample_size),
+            transforms.CenterCrop(opt.sample_size),
+            transforms.ToTensor(opt.norm_value), norm_method
+        ])
         temporal_transform = LoopPadding(opt.sample_duration)
         target_transform = ClassLabel()
         validation_data = get_validation_set(opt, spatial_transform, temporal_transform, target_transform)
@@ -111,10 +114,11 @@ if __name__ == '__main__':
             scheduler.step(validation_loss)
 
     if opt.test:
-        spatial_transform = Compose([
-            Scale(int(opt.sample_size / opt.scale_in_test)),
-            CornerCrop(opt.sample_size, opt.crop_position_in_test),
-            ToTensor(opt.norm_value), norm_method])
+        spatial_transform = transforms.Compose([
+            transforms.Scale(int(opt.sample_size / opt.scale_in_test)),
+            transforms.CornerCrop(opt.sample_size, opt.crop_position_in_test),
+            transforms.ToTensor(opt.norm_value), norm_method
+        ])
 
         temporal_transform = LoopPadding(opt.sample_duration)
         target_transform = VideoID()

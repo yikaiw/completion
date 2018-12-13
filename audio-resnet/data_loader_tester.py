@@ -3,8 +3,8 @@ import torch
 
 dataset = wavLoader('dataset/test')
 
-test_loader = torch.utils.data.DataLoader(dataset, batch_size=100, shuffle=None, num_workers=4, pin_memory=True,
-                                          sampler=None)
+test_loader = torch.utils.data.DataLoader(
+    dataset, batch_size=100, shuffle=None, num_workers=4, pin_memory=True, sampler=None)
 
 for k, (input, label) in enumerate(test_loader):
     print(input.size(), len(label))
@@ -53,7 +53,6 @@ normalize=True
 a=spect_loader(path, window_size, window_stride, window, normalize, max_len=700)[0][0]
 
 
-
 # spect_loader(path, window_size, window_stride, window, normalize, max_len=800)
 plt.plot(spect_loader(path, window_size, window_stride, window, normalize, max_len=700).numpy()[0][0])
 
@@ -77,7 +76,7 @@ print('hop_length',hop_length)
 
 melgram = librosa.amplitude_to_db(librosa.feature.melspectrogram(y, sr=sr, n_mels=120,n_fft=1024))
 
-# D = librosa.stft(y, n_fft=n_fft, hop_length=hop_length, win_length=win_length, window=window_type)
+D = librosa.stft(y, n_fft=n_fft, hop_length=hop_length, win_length=win_length, window=window_type)
 spect, phase = librosa.magphase(D)
 
 vis.heatmap(melgram,opts=dict(title='mel'))

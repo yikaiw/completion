@@ -6,18 +6,19 @@ import numpy as np
 import torch
 import torch.utils.data as data
 
-AUDIO_EXTENSIONS = [
-    '.wav', '.WAV',
-]
+AUDIO_EXTENSIONS = ['.wav', '.WAV',]
+
 
 def is_audio_file(filename):
     return any(filename.endswith(extension) for extension in AUDIO_EXTENSIONS)
+
 
 def find_classes(dir):
     classes = [d for d in os.listdir(dir) if os.path.isdir(os.path.join(dir, d))]
     classes.sort()
     class_to_idx = {classes[i]: i for i in range(len(classes))}
     return classes, class_to_idx
+
 
 def make_dataset(dir, class_to_idx):
     spects = []
@@ -35,22 +36,23 @@ def make_dataset(dir, class_to_idx):
                     spects.append(item)
     return spects
 
+
 def spect_loader(path, window_size, window_stride, window_type, normalize, max_len=401):
     y, sr = librosa.load(path, sr=None)
     n_fft = int(sr * window_size)
     win_length = n_fft
     hop_length = int(sr * window_stride)
-#     print('sr',sr)
-#     print('n_fft',n_fft)
-#     print('win_length',win_length)
-#     print('hop_length',hop_length)
+    # print('sr',sr)
+    # print('n_fft',n_fft)
+    # print('win_length',win_length)
+    # print('hop_length',hop_length)
 
     # STFT
-#     D = librosa.stft(y, n_fft=n_fft, hop_length=hop_length, win_length=win_length, window=window_type)
-#     spect, phase = librosa.magphase(D)
+    # D = librosa.stft(y, n_fft=n_fft, hop_length=hop_length, win_length=win_length, window=window_type)
+    # spect, phase = librosa.magphase(D)
 
     # S = log(S+1)
-#     spect = np.log1p(spect)
+    # spect = np.log1p(spect)
     spect = librosa.amplitude_to_db(librosa.feature.melspectrogram(y, sr=sr, n_mels=120,n_fft=1024))
 
     # make all spects with the same dims
@@ -72,6 +74,7 @@ def spect_loader(path, window_size, window_stride, window_type, normalize, max_l
             spect.div_(std)
 
     return spect
+
 
 class wavLoader(data.Dataset):
     """A google command data set loader where the wavs are arranged in this way: ::
