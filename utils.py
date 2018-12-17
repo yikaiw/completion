@@ -1,4 +1,5 @@
 import os
+import argparse
 import numpy as np
 import tensorflow as tf
 from sklearn.metrics import roc_auc_score
@@ -6,45 +7,6 @@ import config as cf
 import embed
 from reader import Reader
 
-FLAGS = tf.flags.FLAGS
-tf.flags.DEFINE_boolean('restore', default=False, help='Restore from previous model and continue training, default False.')
-tf.flags.DEFINE_boolean('baseline', default=False, help='Run uniform sampling as baseline, default False.')
-tf.flags.DEFINE_string('note', default=None, help='Discription, default None is the current time.')
-tf.flags.DEFINE_integer('gpu', default=0, help='Select gpu from 0 to 3, default 0.')
-tf.flags.DEFINE_integer('cs', default=None, help='Select candidate size, default None.')
-tf.flags.DEFINE_integer('neg_k', default=None, help='Select neg_k >= 1, default None.')
-tf.flags.DEFINE_string('ns', default=None, help='Select ns_type from ons and ens, default None.')
-tf.flags.DEFINE_string('d_loss', default=None, help='Select dis_loss from hinge and ce, default None.')
-tf.flags.DEFINE_float('tem', default=None, help='Select temperature, default None.')
-tf.flags.DEFINE_float('tem_d', default=None, help='Select temperature decay, default None.')
-
-if FLAGS.cs is not None:
-    cf.cs = FLAGS.cs
-if FLAGS.ns is not None:
-    cf.ns_ratio = 1. if FLAGS.ns == 'ons' else 0.
-if FLAGS.d_loss is not None:
-    cf.dis_loss = FLAGS.d_loss
-    cf.ce_loss = True if cf.dis_loss == 'ce' else False
-if FLAGS.neg_k is not None:
-    cf.neg_k = FLAGS.neg_k
-if cf.ns_ratio == 0.:
-    cf.neg_k = 1
-if FLAGS.i_lam is not None:
-    cf.item_lambda = FLAGS.i_lam
-if FLAGS.h_lam is not None:
-    cf.history_lambda = FLAGS.h_lam
-if FLAGS.tem is not None:
-    cf.tem = FLAGS.tem
-if FLAGS.tem_d is not None:
-    cf.tem_decay = FLAGS.tem_d
-if FLAGS.baseline is True:
-    cf.cs, cf.gen_lr, cf.denoise, cf.epoch_start_gen = 1, 0., False, cf.epoch_num
-ns_type = 'ons' if cf.ns_ratio == 1 else 'ens'
-cf.note = '%s,cs=%i,k=%i,%s,lam=(%.1f,%.1f),t=%.1f,t_d=%.2f' \
-    % (ns_type, cf.cs, cf.neg_k, cf.dis_loss, cf.item_lambda, cf.history_lambda, cf.tem, cf.tem_decay)
-if FLAGS.note is not None:
-    cf.note = FLAGS.note
-    
 
 def get_data_dicts():
     reader = Reader()
@@ -66,6 +28,14 @@ def get_data_dicts():
         embed.all_item_cids: reader.all_item_cids}
     item_ids, item_samples = reader.item_ids, reader.item_samples
     return train_data_dict, test_data_dict, item_ids, item_samples
+
+
+def dense_embedding(inputs, hidden_size, layer_num, name):
+    state = inputs
+    for layer in range(layer_num):
+        layer_name = name + '_layer%i' % layer
+        state = tf.layers.dense(state, hidden_size, tf.nn.relu, name=layer_name)
+    return state
 
 
 def get_cands(batch_size, cs):

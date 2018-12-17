@@ -7,7 +7,7 @@ note = datetime.now().strftime('%Y%m%d-%H%M')
 random_seed = 25
 initializer = tf.contrib.layers.xavier_initializer(seed=random_seed)
 
-id_num, one_hot_len, embed_num = None, 4747, None
+id_num, embed_num = None, None
 sample_num = {'train': {'pos': None, 'neg': None}, 'test': {'pos': None, 'neg': None}}
 test_subsample_num = {'pos': 1000, 'neg': None}
 neg_sid_noise = None
@@ -25,11 +25,6 @@ batch_size, test_batch_size = 1024, 40000
 # batch_size, test_batch_size = 512, 8192
 epoch_num, epoch_start_gen, round_num = 50, 3, 5
 
-dis_loss = 'hinge'  # hinge, ce
-gen_distance_metric = 'nor_inner_prod'  # inner_prod, nor_inner_prod, mse
-dis_distance_metric = 'mse'  # mse, cos
-neg_sampling_method = 'random'  # random, random_with_item
-
 neg_k = 1  # int, neg: pos
 
 dis_lr, gen_lr = 0.02, 0.01
@@ -38,7 +33,6 @@ embed_dim, history_len, sample_embed_dim = 50, 10, 8
 dis_hidden_dim, gen_embed_dim = 30, 30
 cid_embed_dim = 8
 margin = 1
-cs = 20  # candidate size
 tem, tem_decay = 20, 1.00
 
 rnn_size = 58
@@ -53,7 +47,12 @@ for dir in dirs:
     if not os.path.exists(dir):
         os.makedirs(dir)
 
-if dis_loss == 'hinge':
-    neg_k = 1
 
-ce_loss = True if dis_loss == 'ce' else False
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--root_path', default='/root/data/ActivityNet', type=str, help='Root directory path of data')
+    parser.add_argument('--video_path', default='video_kinetics_jpg', type=str, help='Directory path of Videos')
+    parser.add_argument('--annotation_path', default='kinetics.json', type=str, help='Annotation file path')
+    parser.add_argument('--result_path', default='results', type=str, help='Result directory path')
+    
+    return parser.parse_args()

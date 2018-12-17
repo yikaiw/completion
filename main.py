@@ -7,41 +7,33 @@ from generator import Generator
 from discriminator import Discriminator
 import utils
 import config as cf
+
+args = cf.parse_args()
+for arg in args.__dict__:
+    setattr(cf, arg, args.__dict__[arg])
+
 warnings.filterwarnings('ignore')
 tf.set_random_seed(cf.random_seed)
 np.random.seed(cf.random_seed)
 np.set_printoptions(threshold=np.inf)
 np.set_printoptions(suppress=True)
-
-FLAGS = tf.flags.FLAGS
 # os.environ['CUDA_VISIBLE_DEVICES'] = str(FLAGS.gpu)
 
 print('Task name: %s' % cf.note)
 print('Loading data.')
 train_data_dict, test_data_dict, item_ids, item_samples = utils.get_data_dicts()
 print('Building generator.')
-gen = {'ons': Generator('ons'), 'ens': Generator('ens')}
+gen = Generator()
 print('Building discriminator.')
 dis = Discriminator()
 
 auc_ = tf.placeholder(tf.float32)
-auc_summary_op = tf.summary.scalar('auc', auc_)
 
 sess = tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))
-saver = tf.train.Saver()
 sess.run(tf.global_variables_initializer())
-dis_writer = tf.summary.FileWriter(join(cf.log_dir, 'dis@' + cf.note), sess.graph)
-gen_writer = tf.summary.FileWriter(join(cf.log_dir, 'gen@' + cf.note), sess.graph)
-test_writer = tf.summary.FileWriter(join(cf.log_dir, 'test@' + cf.note), sess.graph)
 
-model_path = join(cf.model_dir, 'model-')
-if not FLAGS.restore:
-    sess.run(tf.global_variables_initializer())
-    step = 0
-else:
-    print('Restoring from pre-trained model.')
-    saver.restore(sess, model_path)
-    step = int(str(os.listdir(cf.model_dir)[-1].split('-')[-1]).split('.')[0])
+sess.run(tf.global_variables_initializer())
+step = 0
 
 baseline, auc, tem, dis_lr = 0., 0., cf.tem, cf.dis_lr
 neg_sids, dis_loss_list, gen_loss_list = [], [], []
@@ -77,20 +69,17 @@ for epoch in range(cf.epoch_num):
 
         feed_dict = {dis.pos_sids: pos_sids, dis.neg_item_sids: neg_sids, dis.neg_history_sids: dis_neg_his_sids}
         feed_dict.update(train_data_dict)
-        scores, rewards, dis_loss, _, dis_summary = sess.run(
-            [dis.scores, dis.rewards, dis.loss, dis.opt, dis.summary_op], feed_dict)
+        scores, rewards, dis_loss, _ = sess.run([dis.scores, dis.rewards, dis.loss, dis.opt], feed_dict)
         sess.run(gen_.lr_update, feed_dict={gen_.new_lr: gen_lr})
         feed_dict = {gen_.neg_cand_sids: neg_cand_sids, gen_.neg_cand_idxs: neg_cand_idxs, gen_.tem: tem,
             gen_.pos_sids: pos_sids, gen_.rewards: rewards, gen_.baseline: baseline}
         feed_dict.update(train_data_dict)
-        gen_loss, _, gen_summary = sess.run([gen_.loss, gen_.opt, gen_.summary_op], feed_dict)
+        gen_loss, _ = sess.run([gen_.loss, gen_.opt], feed_dict)
 
         dis_loss_list.append(dis_loss)
-        dis_writer.add_summary(dis_summary, step)
         labels = np.concatenate([[1] * len(scores['pos']), [0] * len(scores['neg'])])
         train_auc = utils.cal_auc(labels=labels, scores=np.concatenate([scores['pos'], scores['neg']]))
         gen_loss_list.append(gen_loss)
-        gen_writer.add_summary(gen_summary, step)
 
         print('At step %i (%s):\tdis_loss: %4.1f  \tgen_loss: %6.1f  \ttrain_auc: %.1f'
                 % (step, ns_type, dis_loss, gen_loss + 1e-3, train_auc), flush=True)
@@ -134,17 +123,9 @@ for epoch in range(cf.epoch_num):
 
     print('\nTest scores (%s %s):\nAUC (%%): %.1f (best %.1f)' % (cf.note, str(cf.data_dates), auc, best_auc))
 
-    if auc > 70.5 and cf.test_all_data and cf.save_model:
-        save_path = saver.save(sess, '%s(%d)' % (model_path + cf.note, int(auc)), global_step=step)
-        print('Model saved in file: %s' % save_path)
-    auc_summary = sess.run(auc_summary_op, {auc_: auc})
-    test_writer.add_summary(auc_summary, epoch)
-
 utils.write_results(auc_list, 'auc')
 if cf.ce_loss:
     utils.write_results(pCTR_list, 'pCTR', True, False)
     utils.write_results(loss_list, 'loss', False, False)
 
 sess.close()
-dis_writer.close()
-gen_writer.close()
