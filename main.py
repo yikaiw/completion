@@ -1,10 +1,8 @@
 import numpy as np
 import tensorflow as tf
 import os
-from os.path import join
 import warnings
-from generator import Generator
-from discriminator import Discriminator
+from model import GAN
 import utils
 import config as cf
 
@@ -22,16 +20,10 @@ np.set_printoptions(suppress=True)
 print('Task name: %s' % cf.note)
 print('Loading data.')
 train_data_dict, test_data_dict, item_ids, item_samples = utils.get_data_dicts()
-print('Building generator.')
-gen = Generator()
-print('Building discriminator.')
-dis = Discriminator()
-
-auc_ = tf.placeholder(tf.float32)
+print('Building GAN.')
+gan = GAN()
 
 sess = tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))
-sess.run(tf.global_variables_initializer())
-
 sess.run(tf.global_variables_initializer())
 step = 0
 
@@ -47,8 +39,7 @@ for epoch in range(cf.epoch_num):
     # -Train-
     print('\nFor epoch %i (/%i):' % (epoch, cf.epoch_num - 1))
     permu = np.random.permutation(train_sample_num)
-    rewards_list = []
-    dis_lr = cf.dis_lr * cf.lr_decay ** (epoch // cf.lr_decay_epoch)
+    lr = cf.lr * cf.lr_decay ** (epoch // cf.lr_decay_epoch)
     sess.run(dis.lr_update, feed_dict={dis.new_lr: dis_lr})
     tem = cf.tem * cf.tem_decay ** epoch
     gen_lr = cf.gen_lr * cf.lr_decay ** (epoch // cf.lr_decay_epoch)

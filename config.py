@@ -1,5 +1,6 @@
 import os
 from os.path import join
+import argparse
 import tensorflow as tf
 from datetime import datetime
 note = datetime.now().strftime('%Y%m%d-%H%M')
@@ -14,9 +15,6 @@ neg_sid_noise = None
 test_all_data, save_model, denoise = True, False, False
 ns_ratio = 1.  # ons: observed negative samples, ens: expanded negative samples
 
-param_record_dir = 'param_record'
-model_dir = 'checkpoints'
-log_dir = 'logs'
 result_dir = 'results'
 data_dir = '../data7'
 sample_dirs = {'train': ['0705', '0706'], 'test': ['0707']}
@@ -27,8 +25,9 @@ epoch_num, epoch_start_gen, round_num = 50, 3, 5
 
 neg_k = 1  # int, neg: pos
 
-dis_lr, gen_lr = 0.02, 0.01
+lr = 0.01
 lr_decay_epoch, lr_decay = 10, 0.5
+dis_lam, gen_lam = 0.1, 0.1
 embed_dim, history_len, sample_embed_dim = 50, 10, 8
 dis_hidden_dim, gen_embed_dim = 30, 30
 cid_embed_dim = 8
@@ -42,7 +41,7 @@ attn_length = 10
 
 embed_concat_size = rnn_size * 2 + sample_embed_dim
 
-dirs = [model_dir, log_dir, result_dir, join(data_dir, 'train'), join(data_dir, 'test')]
+dirs = [result_dir, join(data_dir, 'train'), join(data_dir, 'test')]
 for dir in dirs:
     if not os.path.exists(dir):
         os.makedirs(dir)

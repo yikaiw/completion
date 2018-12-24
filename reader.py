@@ -83,7 +83,7 @@ class Reader(object):
         self.history_ids = {'sku': {'train': [], 'test': []}, 'video': {'train': [], 'test': []}}
         self.label = {'train': [], 'test': []}
         for stage in self.stages:
-            print('Load samples in [%s] data.' % stage), flush=True)
+            print('Load samples in [%s] data.' % stage, flush=True)
             total_sample_num, used_sample_num = {'pos': 0, 'neg': 0}, {'pos': 0, 'neg': 0}
 
             for idx in range(len(cf.sample_dirs[stage])):
