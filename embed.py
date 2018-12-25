@@ -12,12 +12,12 @@ with tf.name_scope('data'):
 
 
 class EmbedNet(object):
-    def __init__(self, sids, data_type):
-        target_ids = tf.gather(sample_target_ids[data_type], sids)  # [None, ]
-        history_ids = tf.gather(sample_history_ids[data_type], sids)  # [None, history_len]
+    def __init__(self, sids, modality_type):
+        target_ids = tf.gather(sample_target_ids[modality_type], sids)  # [None, ]
+        history_ids = tf.gather(sample_history_ids[modality_type], sids)  # [None, history_len]
 
-        target_embeds = tf.gather(id_embed_table[data_type], target_ids)  #[None, embed_dim]
-        history_embeds = tf.gather(id_embed_table[data_type], history_ids)  #[None, history_len, embed_dim]
+        target_embeds = tf.gather(id_embed_table[modality_type], target_ids)  #[None, embed_dim]
+        history_embeds = tf.gather(id_embed_table[modality_type], history_ids)  #[None, history_len, embed_dim]
 
         target_embeds = utils.dense_embedding(
             target_embeds, hidden_size=cf.rnn_size, layer_num=3, name='target_embeds')  # [None, rnn_size]

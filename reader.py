@@ -73,15 +73,13 @@ class Reader(object):
         def get_list_ids(origin_ids, id_table):
             ids = []
             for origin_id in origin_ids:
-                if origin_id in id_table:
-                    ids.append(id_table[origin_id])
-                else:
-                    ids.append(0)  # 0 stands for missing
+                ids.append(id_table[origin_id] if origin_id in id_table else 0)  # 0 means missing
             return ids
 
         self.target_ids = {'sku': {'train': [], 'test': []}, 'video': {'train': [], 'test': []}}
         self.history_ids = {'sku': {'train': [], 'test': []}, 'video': {'train': [], 'test': []}}
-        self.label = {'train': [], 'test': []}
+        self.label = {'train': [], 'test': []}, 
+        self.sample_idx = {'train': {'pos': [], 'neg': []}, 'test': {'pos': [], 'neg': []}}
         for stage in self.stages:
             print('Load samples in [%s] data.' % stage, flush=True)
             total_sample_num, used_sample_num = {'pos': 0, 'neg': 0}, {'pos': 0, 'neg': 0}
@@ -95,21 +93,26 @@ class Reader(object):
                     total_sample_num[sample_type] += 1
                     if sample.count('mp4') <= 1 or video_id not in self.video_id or sku_id not in self.sku_id:
                         continue
-                    used_sample_num[sample_type] += 1
-                    history_sku_ids = get_list_ids(split[8].split(' '), self.sku_id)
+                    target_id, history_id = {}, {}
+                    target_id['sku'], target_id['video'] = sku_id, video_id
+                    history_id['sku'] = get_list_ids(split[8].split(' '), self.sku_id)
                     video_origin_ids = [i.split('_')[0] for i in split[7].split(' ')]
-                    history_video_ids = get_list_ids(video_origin_ids, self.video_id)
+                    history_id['video'] = get_list_ids(video_origin_ids, self.video_id)
                     # history_video_times = [i.split('_')[1] for i in history_video]
+
                     self.label[stage].append(int(sample_type == 'pos'))
-                    self.target_ids['sku'][stage].append(sku_id)
-                    self.target_ids['video'][stage].append(video_id)
-                    self.history_ids['sku'][stage].append(history_sku_ids)
-                    self.history_ids['video'][stage].append(history_video_ids)
+                    self.sample_idx[stage][sample_type].append(used_sample_num[sample_type])
+                    for modality in ['sku', 'video']:
+                        self.target_ids[modality][stage].append(target_id[modality])
+                        self.history_ids[modality][stage].append(history_id[modality])
+                    used_sample_num[sample_type] += 1
                 sample_file.close()
             print('total sample num in [%s] data: pos %i, neg %i\n' 
                 % (stage, total_sample_num['pos'], total_sample_num['neg']), flush=True)
             print('used sample num in [%s] data: pos %i, neg %i\n' 
                 % (stage, used_sample_num['pos'], used_sample_num['neg']), flush=True)
+            cf.sample_num[stage] = used_sample_num['pos'] + used_sample_num['neg']
+        cf.label, cf.sample_idx = self.label, self.sample_idx
 
     def url_loader(self):
         url, image_id, opener = '', '', ''
@@ -121,3 +124,7 @@ class Reader(object):
         opener = urllib2.build_opener(opener)
         with open(videopath, 'wb') as f:
             f.write(urllib2.urlopen(url).read())
+
+
+if __name__ == '__main__':
+    reader = Reader()

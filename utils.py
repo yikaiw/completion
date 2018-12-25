@@ -9,24 +9,21 @@ from reader import Reader
 
 def get_data_dicts():
     reader = Reader()
-    train_data_dict = {embed.sample_item_ids['pos']: reader.item_ids['train']['pos'],
-        embed.sample_item_ids['neg']: reader.item_ids['train']['neg'],
-        embed.sample_history_ids['pos']: reader.history_ids['train']['pos'],
-        embed.sample_history_ids['neg']: reader.history_ids['train']['neg'],
-        embed.sample_embeds['pos']: reader.sample_embeds['train']['pos'],
-        embed.sample_embeds['neg']: reader.sample_embeds['train']['neg'],
-        embed.all_item_embeds: reader.all_item_embeds,
-        embed.all_item_cids: reader.all_item_cids}
-    test_data_dict = {embed.sample_item_ids['pos']: reader.item_ids['test']['pos'],
-        embed.sample_item_ids['neg']: reader.item_ids['test']['neg'],
-        embed.sample_history_ids['pos']: reader.history_ids['test']['pos'],
-        embed.sample_history_ids['neg']: reader.history_ids['test']['neg'],
-        embed.sample_embeds['pos']: reader.sample_embeds['test']['pos'],
-        embed.sample_embeds['neg']: reader.sample_embeds['test']['neg'],
-        embed.all_item_embeds: reader.all_item_embeds,
-        embed.all_item_cids: reader.all_item_cids}
-    item_ids, item_samples = reader.item_ids, reader.item_samples
-    return train_data_dict, test_data_dict, item_ids, item_samples
+    train_data_dict = {embed.id_embed_table['sku']: reader.id_embed_table['train']['sku'],
+        embed.id_embed_table['video']: reader.id_embed_table['train']['video']}
+    test_data_dict = {embed.id_embed_table['sku']: reader.id_embed_table['test']['sku'],
+        embed.id_embed_table['video']: reader.id_embed_table['test']['video']}
+    for modality_type in ['sku', 'video']:
+        for sample_type in ['pos', 'neg']:
+            train_data_dict[embed.sample_target_ids[modality_type][sample_type]] 
+                = reader.sample_target_ids['train'][modality_type][sample_type]
+            train_data_dict[embed.sample_history_ids[modality_type][sample_type]] 
+                = reader.sample_history_ids['train'][modality_type][sample_type]
+            test_data_dict[embed.sample_target_ids[modality_type][sample_type]] 
+                = reader.sample_target_ids['test'][modality_type][sample_type]
+            test_data_dict[embed.sample_history_ids[modality_type][sample_type]] 
+                = reader.sample_history_ids['test'][modality_type][sample_type]
+    return train_data_dict, test_data_dict
 
 
 def dense_embedding(inputs, hidden_size, layer_num, name):
@@ -37,10 +34,11 @@ def dense_embedding(inputs, hidden_size, layer_num, name):
     return state
 
 
-def get_cands(batch_size, cs):
+def get_negs(batch_size, cs):
     sample_num = cf.sample_num['train']['neg']
-    neg_cand_sids = np.random.randint(0, sample_num, size=[batch_size * cf.neg_k, cs])
-    return neg_cand_sids
+    idx = np.random.randint(0, sample_num, size=[batch_size * cf.neg_k])
+    neg_sids = cf.sample_idx[idx]
+    return neg_sids
 
 
 def get_denoised_cands(batch_size, cs, pos_sids, item_ids, item_samples, random=None):

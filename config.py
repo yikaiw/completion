@@ -9,7 +9,8 @@ random_seed = 25
 initializer = tf.contrib.layers.xavier_initializer(seed=random_seed)
 
 id_num, embed_num = None, None
-sample_num = {'train': {'pos': None, 'neg': None}, 'test': {'pos': None, 'neg': None}}
+sample_num = {'train': None, 'test': None}
+label, sample_idx = None, None
 test_subsample_num = {'pos': 1000, 'neg': None}
 neg_sid_noise = None
 test_all_data, save_model, denoise = True, False, False

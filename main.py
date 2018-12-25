@@ -19,7 +19,7 @@ np.set_printoptions(suppress=True)
 
 print('Task name: %s' % cf.note)
 print('Loading data.')
-train_data_dict, test_data_dict, item_ids, item_samples = utils.get_data_dicts()
+train_data_dict, test_data_dict = utils.get_data_dicts()
 print('Building GAN.')
 gan = GAN()
 
@@ -27,38 +27,23 @@ sess = tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=T
 sess.run(tf.global_variables_initializer())
 step = 0
 
-baseline, auc, tem, dis_lr = 0., 0., cf.tem, cf.dis_lr
-neg_sids, dis_loss_list, gen_loss_list = [], [], []
-auc_list, pCTR_list, f_score_list, g_score_list, loss_list = [], [], [], [], []
+loss_list, auc_list = [], []
 train_sample_num = cf.sample_num['train']['pos'] // cf.batch_size * cf.batch_size
-test_labels = np.concatenate([np.ones(cf.sample_num['test']['pos']), np.zeros(cf.sample_num['test']['neg'])])
 best_auc = 0.
 
 print('Start training:')
 for epoch in range(cf.epoch_num):
     # -Train-
     print('\nFor epoch %i (/%i):' % (epoch, cf.epoch_num - 1))
-    permu = np.random.permutation(train_sample_num)
+    pos_idx = cf.sample_idx['train']['pos']
+    permu = np.random.permutation(pos_idx)[:train_sample_num]
     lr = cf.lr * cf.lr_decay ** (epoch // cf.lr_decay_epoch)
-    sess.run(dis.lr_update, feed_dict={dis.new_lr: dis_lr})
-    tem = cf.tem * cf.tem_decay ** epoch
-    gen_lr = cf.gen_lr * cf.lr_decay ** (epoch // cf.lr_decay_epoch)
+    sess.run(gan.lr_update, feed_dict={gan.new_lr: lr})
     for sample_idx in range(0, train_sample_num, cf.batch_size):
         pos_sids = permu[sample_idx: sample_idx + cf.batch_size]
-        neg_cand_sids = utils.get_cands(cf.batch_size, cf.cs)  # [batch_size * neg_k, cs]
+        neg_sids = utils.get_negs(cf.batch_size, cf.neg_k)  # [batch_size * neg_k]
 
-        ns_type = 'ons' if np.random.rand() < cf.ns_ratio else 'ens'
-        gen_ = gen[ns_type]
-        feed_dict = {gen_.pos_sids: pos_sids, gen_.neg_cand_sids: neg_cand_sids, gen_.tem: tem}
-        feed_dict.update(train_data_dict)
-        # neg_cand_probs = np.ones((cf.batch_size, cf.cs)) / cf.cs
-        neg_cand_probs = sess.run(gen_.neg_cand_probs, feed_dict)  # [batch_size, cs]
-        # print(neg_cand_probs[0], flush=True)
-        neg_cand_idxs = utils.sample_from_probs(neg_cand_probs)  # [batch_size, 2]
-        neg_sids = utils.get_neg_sids(neg_cand_sids, neg_cand_idxs)  # [batch_size]
-        dis_neg_his_sids = neg_sids if cf.ns_type == 'ons' else pos_sids
-
-        feed_dict = {dis.pos_sids: pos_sids, dis.neg_item_sids: neg_sids, dis.neg_history_sids: dis_neg_his_sids}
+        feed_dict = {dis.pos_sids: pos_sids, dis.neg_sids: neg_sids}
         feed_dict.update(train_data_dict)
         scores, rewards, dis_loss, _ = sess.run([dis.scores, dis.rewards, dis.loss, dis.opt], feed_dict)
         sess.run(gen_.lr_update, feed_dict={gen_.new_lr: gen_lr})

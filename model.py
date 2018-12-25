@@ -15,8 +15,8 @@ class GAN(object):
             self.lr_update = tf.assign(self.lr, self.new_lr)
 
         with tf.variable_scope('embed_net', initializer=cf.initializer):
-            sku_net = EmbedNet(self.sids, data_type='sku')
-            video_net = EmbedNet(self.sids, data_type='video')
+            sku_net = EmbedNet(self.sids, modality_type='sku')
+            video_net = EmbedNet(self.sids, modality_type='video')
 
             sku_embed, real_video_embed = sku_net.embed, video_net.embed
 
