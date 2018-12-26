@@ -1,6 +1,4 @@
 import os
-import urllib2
-import numpy as np
 import config as cf
 
 
@@ -78,7 +76,7 @@ class Reader(object):
 
         self.target_ids = {'sku': {'train': [], 'test': []}, 'video': {'train': [], 'test': []}}
         self.history_ids = {'sku': {'train': [], 'test': []}, 'video': {'train': [], 'test': []}}
-        self.label = {'train': [], 'test': []}, 
+        self.class_labels = {'train': [], 'test': []},
         self.sample_idx = {'train': {'pos': [], 'neg': []}, 'test': {'pos': [], 'neg': []}}
         for stage in self.stages:
             print('Load samples in [%s] data.' % stage, flush=True)
@@ -100,7 +98,7 @@ class Reader(object):
                     history_id['video'] = get_list_ids(video_origin_ids, self.video_id)
                     # history_video_times = [i.split('_')[1] for i in history_video]
 
-                    self.label[stage].append(int(sample_type == 'pos'))
+                    self.class_labels[stage].append(int(sample_type == 'pos'))
                     self.sample_idx[stage][sample_type].append(used_sample_num[sample_type])
                     for modality in ['sku', 'video']:
                         self.target_ids[modality][stage].append(target_id[modality])
@@ -112,18 +110,7 @@ class Reader(object):
             print('used sample num in [%s] data: pos %i, neg %i\n' 
                 % (stage, used_sample_num['pos'], used_sample_num['neg']), flush=True)
             cf.sample_num[stage] = used_sample_num['pos'] + used_sample_num['neg']
-        cf.label, cf.sample_idx = self.label, self.sample_idx
-
-    def url_loader(self):
-        url, image_id, opener = '', '', ''
-        url = 'http://storage.jd.com' + url
-        videoname = os.path.basename(url)
-        os.mkdir(image_id)
-        videopath = os.path.join(image_id, videoname)
-        proxy_handler = urllib2.ProxyHandler({'http': 'http://172.22.178.101:80'})
-        opener = urllib2.build_opener(opener)
-        with open(videopath, 'wb') as f:
-            f.write(urllib2.urlopen(url).read())
+        cf.class_labels, cf.sample_idx = self.class_labels, self.sample_idx
 
 
 if __name__ == '__main__':

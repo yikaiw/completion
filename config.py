@@ -10,7 +10,7 @@ initializer = tf.contrib.layers.xavier_initializer(seed=random_seed)
 
 id_num, embed_num = None, None
 sample_num = {'train': None, 'test': None}
-label, sample_idx = None, None
+class_labels, sample_idx = None, None
 test_subsample_num = {'pos': 1000, 'neg': None}
 neg_sid_noise = None
 test_all_data, save_model, denoise = True, False, False
@@ -28,7 +28,7 @@ neg_k = 1  # int, neg: pos
 
 lr = 0.01
 lr_decay_epoch, lr_decay = 10, 0.5
-dis_lam, gen_lam = 0.1, 0.1
+class_lam = 0.1
 embed_dim, history_len, sample_embed_dim = 50, 10, 8
 dis_hidden_dim, gen_embed_dim = 30, 30
 cid_embed_dim = 8

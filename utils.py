@@ -15,13 +15,13 @@ def get_data_dicts():
         embed.id_embed_table['video']: reader.id_embed_table['test']['video']}
     for modality_type in ['sku', 'video']:
         for sample_type in ['pos', 'neg']:
-            train_data_dict[embed.sample_target_ids[modality_type][sample_type]] 
+            train_data_dict[embed.sample_target_ids[modality_type][sample_type]] \
                 = reader.sample_target_ids['train'][modality_type][sample_type]
-            train_data_dict[embed.sample_history_ids[modality_type][sample_type]] 
+            train_data_dict[embed.sample_history_ids[modality_type][sample_type]] \
                 = reader.sample_history_ids['train'][modality_type][sample_type]
-            test_data_dict[embed.sample_target_ids[modality_type][sample_type]] 
+            test_data_dict[embed.sample_target_ids[modality_type][sample_type]] \
                 = reader.sample_target_ids['test'][modality_type][sample_type]
-            test_data_dict[embed.sample_history_ids[modality_type][sample_type]] 
+            test_data_dict[embed.sample_history_ids[modality_type][sample_type]] \
                 = reader.sample_history_ids['test'][modality_type][sample_type]
     return train_data_dict, test_data_dict
 
