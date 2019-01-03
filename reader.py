@@ -5,8 +5,8 @@ import config as cf
 class Reader(object):
     def __init__(self):
         self.build_paths()
-        self.index_load_sku()
-        self.index_load_video()
+        self.index_load_embeds_image()
+        self.index_load_embeds_video()
         self.load_samples()
 
     def build_paths(self):
@@ -23,45 +23,45 @@ class Reader(object):
 
         self.stages = ['train', 'test']
         self.sample_file = path_dict('user_clicked_videos.dat')
-        self.sku_embed_file = join('embed_sku.dat')
+        self.image_embed_file = join('embed_image.dat')
         self.video_embed_file = [join('embed_video_1.dat'), join('embed_video_2.dat')]
 
-    def index_load_sku(self):
-        # index sku ids and load sku embeddings
-        self.sku_id, self.sku_id_num = {}, 1
-        self.sku_embed = []
-        print('Re-index ids and load sku embeddings.', flush=True)
-        sku_embed_file = open(self.sku_embed_file, 'r')
-        for id_embed in sku_embed_file.readlines():
+    def index_load_embeds_image(self):
+        # index image ids and load image embeddings
+        self.image_id_table, self.image_id_num = {}, 1
+        self.image_embed = []
+        print('Re-index ids and load image embeddings.', flush=True)
+        image_embed_file = open(self.image_embed_file, 'r')
+        for id_embed in image_embed_file.readlines():
             id = id_embed.split()[0]
-            if id not in self.sku_id:
+            if id not in self.image_id_table:
                 try:
                     embed = list(map(float, id_embed.split()[1:]))
-                    self.sku_embed.append(embed)
+                    self.image_embed.append(embed)
                 except ValueError:
                     continue
-                self.sku_id[id] = self.sku_id_num
-                self.sku_id_num += 1
-        sku_embed_file.close()
-        print('sku id num %i\n' % self.sku_id_num, flush=True)
-        cf.sku_id_num = self.sku_id_num
+                self.image_id_table[id] = self.image_id_num
+                self.image_id_num += 1
+        image_embed_file.close()
+        print('image id num %i\n' % self.image_id_num, flush=True)
+        cf.image_id_num = self.image_id_num
 
-    def index_load_video(self):
-        # index video ids and load sku embeddings
-        self.video_id, self.video_id_num = {}, 1
+    def index_load_embeds_video(self):
+        # index video ids and load image embeddings
+        self.video_id_table, self.video_id_num = {}, 1
         self.video_embed = []
         print('Re-index ids and load video embeddings.', flush=True)
         for i in range(len(self.video_embed_file)):
             video_embed_file = open(self.video_embed_file[i], 'r')
             for id_embed in video_embed_file.readlines():
                 id = id_embed.split()[0]
-                if id not in self.video_id:
+                if id not in self.video_id_table:
                     try:
                         embed = list(map(float, id_embed.split()[1:]))
                         self.video_embed.append(embed)
                     except ValueError:
                         continue
-                    self.video_id[id] = self.video_id_num
+                    self.video_id_table[id] = self.video_id_num
                     self.video_id_num += 1
             video_embed_file.close()
         print('video id num %i\n' % self.video_id_num, flush=True)
@@ -74,9 +74,9 @@ class Reader(object):
                 ids.append(id_table[origin_id] if origin_id in id_table else 0)  # 0 means missing
             return ids
 
-        self.target_ids = {'sku': {'train': [], 'test': []}, 'video': {'train': [], 'test': []}}
-        self.history_ids = {'sku': {'train': [], 'test': []}, 'video': {'train': [], 'test': []}}
-        self.class_labels = {'train': [], 'test': []},
+        self.target_ids = {'image': {'train': [], 'test': []}, 'video': {'train': [], 'test': []}}
+        self.history_ids = {'image': {'train': [], 'test': []}, 'video': {'train': [], 'test': []}}
+        self.class_labels = {'train': [], 'test': []}
         self.sample_idx = {'train': {'pos': [], 'neg': []}, 'test': {'pos': [], 'neg': []}}
         for stage in self.stages:
             print('Load samples in [%s] data.' % stage, flush=True)
@@ -87,20 +87,23 @@ class Reader(object):
                 for sample in sample_file.readlines():
                     split = sample.split(',')
                     sample_type = 'pos' if split[0] == '1' else 'neg'
-                    request_id, request_time, user_id, image_id, video_id, sku_id = split[1: 7]
+                    request_id, request_time, user_id, image_id, video_id, image_id = split[1: 7]
                     total_sample_num[sample_type] += 1
-                    if sample.count('mp4') <= 1 or video_id not in self.video_id or sku_id not in self.sku_id:
+                    if sample.count('mp4') <= 1:
+                        continue
+                    if video_id not in self.video_id_table or image_id not in self.image_id_table:
                         continue
                     target_id, history_id = {}, {}
-                    target_id['sku'], target_id['video'] = sku_id, video_id
-                    history_id['sku'] = get_list_ids(split[8].split(' '), self.sku_id)
-                    video_origin_ids = [i.split('_')[0] for i in split[7].split(' ')]
-                    history_id['video'] = get_list_ids(video_origin_ids, self.video_id)
+                    target_id['image'], target_id['video'] = image_id, video_id
+                    image_origin_ids = [i.split('_')[1] for i in split[7].split(' ')]  # sku ids
+                    history_id['image'] = get_list_ids(image_origin_ids, self.image_id_table)
+                    video_origin_ids = [i.split('_')[2] for i in split[7].split(' ')]
+                    history_id['video'] = get_list_ids(video_origin_ids, self.video_id_table)
                     # history_video_times = [i.split('_')[1] for i in history_video]
 
                     self.class_labels[stage].append(int(sample_type == 'pos'))
                     self.sample_idx[stage][sample_type].append(used_sample_num[sample_type])
-                    for modality in ['sku', 'video']:
+                    for modality in ['image', 'video']:
                         self.target_ids[modality][stage].append(target_id[modality])
                         self.history_ids[modality][stage].append(history_id[modality])
                     used_sample_num[sample_type] += 1

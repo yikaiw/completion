@@ -3,11 +3,11 @@ import config as cf
 import utils
 
 with tf.name_scope('data'):
-    sample_target_ids = {'sku': tf.placeholder(tf.int32, [None, ], name='sku_target_ids'),
+    sample_target_ids = {'image': tf.placeholder(tf.int32, [None, ], name='image_target_ids'),
         'video': tf.placeholder(tf.int32, [None, ], name='video_target_ids')}
-    sample_history_ids = {'sku': tf.placeholder(tf.int32, [None, cf.history_len], name='sku_history_ids'),
+    sample_history_ids = {'image': tf.placeholder(tf.int32, [None, cf.history_len], name='image_history_ids'),
         'video': tf.placeholder(tf.int32, [None, cf.history_len], name='video_history_ids')}
-    id_embed_table = {'sku': tf.placeholder(tf.float32, [None, cf.embed_dim], name='sku_embed_table'),
+    id_embed_table = {'image': tf.placeholder(tf.float32, [None, cf.embed_dim], name='image_embed_table'),
         'video': tf.placeholder(tf.float32, [None, cf.embed_dim], name='video_embed_table')}
 
 

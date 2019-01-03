@@ -9,11 +9,11 @@ from reader import Reader
 
 def get_data_dicts():
     reader = Reader()
-    train_data_dict = {embed.id_embed_table['sku']: reader.id_embed_table['train']['sku'],
+    train_data_dict = {embed.id_embed_table['image']: reader.id_embed_table['train']['image'],
         embed.id_embed_table['video']: reader.id_embed_table['train']['video']}
-    test_data_dict = {embed.id_embed_table['sku']: reader.id_embed_table['test']['sku'],
+    test_data_dict = {embed.id_embed_table['image']: reader.id_embed_table['test']['image'],
         embed.id_embed_table['video']: reader.id_embed_table['test']['video']}
-    for modality_type in ['sku', 'video']:
+    for modality_type in ['image', 'video']:
         for sample_type in ['pos', 'neg']:
             train_data_dict[embed.sample_target_ids[modality_type][sample_type]] \
                 = reader.sample_target_ids['train'][modality_type][sample_type]

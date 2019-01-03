@@ -15,17 +15,17 @@ class Generator(object):
             self.lr_update = tf.assign(self.lr, self.new_lr)
 
         with tf.variable_scope('embed_net', initializer=cf.initializer):
-            sku_net = EmbedNet(self.sids, modality_type='sku')
+            image_net = EmbedNet(self.sids, modality_type='image')
             video_net = EmbedNet(self.sids, modality_type='video')
 
-            sku_embed, real_video_embed = sku_net.embed, video_net.embed
+            image_embed, real_video_embed = image_net.embed, video_net.embed
 
         with tf.variable_scope('generator_net', initializer=cf.initializer):
             fake_video_embed = utils.dense_embedding(
-                sku_embed, hidden_size=cf.rnn_size, layer_num=3, name='fake_video_embed')
+                image_embed, hidden_size=cf.rnn_size, layer_num=3, name='fake_video_embed')
 
-            real_embed = tf.concat([sku_embed, real_video_embed], axis=1)
-            fake_embed = tf.concat([sku_embed, fake_video_embed], axis=1)
+            real_embed = tf.concat([image_embed, real_video_embed], axis=1)
+            fake_embed = tf.concat([image_embed, fake_video_embed], axis=1)
 
         with tf.variable_scope('critic_score_net', initializer=cf.initializer) as scope:
             self.real_critic_scores = self.score_net(real_embed, name='critic')
