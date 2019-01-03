@@ -1,6 +1,5 @@
 import tensorflow as tf
 import config as cf
-import utils
 
 with tf.name_scope('data'):
     sample_target_ids = {'image': tf.placeholder(tf.int32, [None, ], name='image_target_ids'),
@@ -12,14 +11,14 @@ with tf.name_scope('data'):
 
 
 class EmbedNet(object):
-    def __init__(self, sids, modality_type):
-        target_ids = tf.gather(sample_target_ids[modality_type], sids)  # [None, ]
-        history_ids = tf.gather(sample_history_ids[modality_type], sids)  # [None, history_len]
+    def __init__(self, sids, modality):
+        target_ids = tf.gather(sample_target_ids[modality], sids)  # [None, ]
+        history_ids = tf.gather(sample_history_ids[modality], sids)  # [None, history_len]
 
-        target_embeds = tf.gather(id_embed_table[modality_type], target_ids)  #[None, embed_dim]
-        history_embeds = tf.gather(id_embed_table[modality_type], history_ids)  #[None, history_len, embed_dim]
+        target_embeds = tf.gather(id_embed_table[modality], target_ids)  #[None, embed_dim]
+        history_embeds = tf.gather(id_embed_table[modality], history_ids)  #[None, history_len, embed_dim]
 
-        target_embeds = utils.dense_embedding(
+        target_embeds = self.dense_embedding(
             target_embeds, hidden_size=cf.rnn_size, layer_num=3, name='target_embeds')  # [None, rnn_size]
         history_embeds = self.gru_embedding(history_embeds, cf.rnn_size)
         history_embeds = tf.reshape(history_embeds, [-1, cf.history_len, cf.rnn_size])  # [None, rnn_size]
@@ -72,4 +71,12 @@ class EmbedNet(object):
         gru_outputs, gru_states = tf.stack(outputs), tf.stack(states[1:])
         # gru_outputs == gru_states
         return gru_states
+
+    def dense_embedding(self, inputs, hidden_size, layer_num, name):
+        state = inputs
+        for layer in range(layer_num):
+            layer_name = name + '_layer%i' % layer
+            state = tf.layers.dense(state, hidden_size, tf.nn.relu, name=layer_name)
+        return state
+
     

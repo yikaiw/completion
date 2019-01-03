@@ -1,7 +1,6 @@
 import tensorflow as tf
 import config as cf
 from embed import EmbedNet
-import utils
 
 
 class Generator(object):
@@ -17,13 +16,11 @@ class Generator(object):
         with tf.variable_scope('embed_net', initializer=cf.initializer):
             image_net = EmbedNet(self.sids, modality_type='image')
             video_net = EmbedNet(self.sids, modality_type='video')
-
             image_embed, real_video_embed = image_net.embed, video_net.embed
 
         with tf.variable_scope('generator_net', initializer=cf.initializer):
-            fake_video_embed = utils.dense_embedding(
+            fake_video_embed = self.dense_embedding(
                 image_embed, hidden_size=cf.rnn_size, layer_num=3, name='fake_video_embed')
-
             real_embed = tf.concat([image_embed, real_video_embed], axis=1)
             fake_embed = tf.concat([image_embed, fake_video_embed], axis=1)
 
@@ -51,7 +48,14 @@ class Generator(object):
             self.opt = tf.train.AdamOptimizer(self.lr).minimize(self.loss)
 
     def score_net(self, inputs, name):
-        states = utils.dense_embedding(
+        states = self.dense_embedding(
             inputs, hidden_size=cf.rnn_size, layer_num=2, name='%s_score_net' % name)
         scores = tf.squeeze(tf.layers.dense(states, 1, None, name='%s_scores' % name))
         return scores
+
+    def dense_embedding(self, inputs, hidden_size, layer_num, name):
+        state = inputs
+        for layer in range(layer_num):
+            layer_name = name + '_layer%i' % layer
+            state = tf.layers.dense(state, hidden_size, tf.nn.relu, name=layer_name)
+        return state

@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import config as cf
 
 
@@ -43,6 +44,7 @@ class Reader(object):
                 self.image_id_table[id] = self.image_id_num
                 self.image_id_num += 1
         image_embed_file.close()
+        self.image_id_table[0] = 0
         print('image id num %i\n' % self.image_id_num, flush=True)
         cf.image_id_num = self.image_id_num
 
@@ -64,14 +66,18 @@ class Reader(object):
                     self.video_id_table[id] = self.video_id_num
                     self.video_id_num += 1
             video_embed_file.close()
+        self.video_id_table[0] = 0
         print('video id num %i\n' % self.video_id_num, flush=True)
         cf.video_id_num = self.video_id_num
 
     def load_samples(self):
         def get_list_ids(origin_ids, id_table):
+            origin_ids_tmp = np.zeros(cf.history_len)
+            for i in range(cf.history_len):
+                origin_ids_tmp[i] = origin_ids[i]
             ids = []
-            for origin_id in origin_ids:
-                ids.append(id_table[origin_id] if origin_id in id_table else 0)  # 0 means missing
+            for origin_id in origin_ids_tmp:
+                ids.append(id_table[origin_id] if origin_id in id_table else 0)
             return ids
 
         self.target_ids = {'image': {'train': [], 'test': []}, 'video': {'train': [], 'test': []}}
@@ -82,7 +88,7 @@ class Reader(object):
             print('Load samples in [%s] data.' % stage, flush=True)
             total_sample_num, used_sample_num = {'pos': 0, 'neg': 0}, {'pos': 0, 'neg': 0}
 
-            for idx in range(len(cf.sample_dirs[stage])):
+            for idx in range(len(self.sample_file[stage])):
                 sample_file = open(self.sample_file[stage][idx], 'r')
                 for sample in sample_file.readlines():
                     split = sample.split(',')
@@ -100,7 +106,10 @@ class Reader(object):
                     video_origin_ids = [i.split('_')[2] for i in split[7].split(' ')]
                     history_id['video'] = get_list_ids(video_origin_ids, self.video_id_table)
                     # history_video_times = [i.split('_')[1] for i in history_video]
-
+                    if stage == 'test':
+                        for i in range(cf.history_len):
+                            if np.random.rand < cf.missing_rate:
+                                history_id['video'][i] = 0
                     self.class_labels[stage].append(int(sample_type == 'pos'))
                     self.sample_idx[stage][sample_type].append(used_sample_num[sample_type])
                     for modality in ['image', 'video']:
