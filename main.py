@@ -12,8 +12,8 @@ parser.add_argument('--root_path', default='/root/data/ActivityNet', type=str, h
 parser.add_argument('--video_path', default='video_kinetics_jpg', type=str, help='Directory path of Videos')
 parser.add_argument('--annotation_path', default='kinetics.json', type=str, help='Annotation file path')
 parser.add_argument('--result_path', default='results', type=str, help='Result directory path')
-
 args = parser.parse_args()
+
 for arg in args.__dict__:
     setattr(cf, arg, args.__dict__[arg])
 
